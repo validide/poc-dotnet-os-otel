@@ -1,0 +1,89 @@
+services:
+  opensearch:
+    image: opensearchproject/opensearch:3
+    container_name: opensearch
+    environment:
+      - discovery.type=single-node
+      - bootstrap.memory_lock=true
+      - "OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m"
+      - "DISABLE_SECURITY_PLUGIN=false"
+      - "OPENSEARCH_INITIAL_ADMIN_PASSWORD=6fGjWHZukijsP5^PJ2zGj"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
+    ports:
+      - "9200:9200"
+      - "9600:9600"
+    networks:
+      - otel-network
+    healthcheck:
+      test: [ "CMD-SHELL", "curl -k -u admin:6fGjWHZukijsP5^PJ2zGj https://localhost:9200/_cluster/health || exit 1" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  opensearch-dashboards:
+    image: opensearchproject/opensearch-dashboards:3
+    container_name: opensearch-dashboards
+    ports:
+      - "5601:5601"
+    environment:
+      - 'OPENSEARCH_HOSTS=["https://opensearch:9200"]'
+      - "DISABLE_SECURITY_DASHBOARDS_PLUGIN=false"
+    depends_on:
+      opensearch:
+        condition: service_healthy
+    networks:
+      - otel-network
+
+  data-prepper:
+    image: opensearchproject/data-prepper:2
+    container_name: data-prepper
+    volumes:
+      - ./data-prepper-config.yaml:/usr/share/data-prepper/pipelines/pipelines.yaml
+    ports:
+      - "21890:21890" # OTLP traces gRPC
+      - "21891:21891" # OTLP traces HTTP
+      - "21892:21892" # OTLP logs gRPC
+    depends_on:
+      opensearch:
+        condition: service_healthy
+    networks:
+      - otel-network
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.138.0
+    container_name: otel-collector
+    command: [ "--config=/etc/otel-collector-config.yaml" ]
+    volumes:
+      - ./otel-collector-config.yaml:/etc/otel-collector-config.yaml
+    ports:
+      - "4317:4317" # OTLP gRPC receiver
+      - "4318:4318" # OTLP HTTP receiver
+      - "8888:8888" # Prometheus metrics exposed by the collector
+    depends_on:
+      - data-prepper
+    networks:
+      - otel-network
+
+  dotnet-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: dotnet-app
+    ports:
+      - "5233:5233"
+    environment:
+      - OTLP_ENDPOINT=http://otel-collector:4317
+    depends_on:
+      - otel-collector
+    networks:
+      - otel-network
+
+networks:
+  otel-network:
+    driver: bridge

@@ -1,0 +1,60 @@
+# Entry pipeline receives trace data from OpenTelemetry Collector
+entry-pipeline:
+  source:
+    otel_trace_source:
+      ssl: false
+      port: 21890
+  processor:
+    - otel_trace_raw:
+  sink:
+    - pipeline:
+        name: "raw-pipeline"
+    - pipeline:
+        name: "service-map-pipeline"
+
+# Raw pipeline processes and stores individual spans
+raw-pipeline:
+  source:
+    pipeline:
+      name: "entry-pipeline"
+  processor:
+    - otel_traces:
+  sink:
+    - opensearch:
+        hosts: ["https://opensearch:9200"]
+        username: "admin"
+        password: "6fGjWHZukijsP5^PJ2zGj"
+        insecure: true
+        index_type: trace-analytics-raw
+        bulk_size: 4
+
+# Service map pipeline creates service relationships
+service-map-pipeline:
+  source:
+    pipeline:
+      name: "entry-pipeline"
+  processor:
+    - service_map:
+  sink:
+    - opensearch:
+        hosts: ["https://opensearch:9200"]
+        username: "admin"
+        password: "6fGjWHZukijsP5^PJ2zGj"
+        insecure: true
+        index_type: trace-analytics-service-map
+
+# Log pipeline for log ingestion
+log-pipeline:
+  source:
+    otel_logs_source:
+      ssl: false
+      port: 21892
+  processor:
+    - otel_logs:
+  sink:
+    - opensearch:
+        hosts: ["https://opensearch:9200"]
+        username: "admin"
+        password: "6fGjWHZukijsP5^PJ2zGj"
+        insecure: true
+        index: "otel-logs-%{yyyy.MM.dd}"
