@@ -9,7 +9,7 @@ A proof of concept demonstrating OpenTelemetry integration with OpenSearch 3 usi
 │                         Main API (5233)                         │
 │                  Orchestrates requests across                   │
 │                   Storage API & Analytics API                   │
-└────────┬──────────────────────────────────┬───────────────────┘
+└────────┬───────────────────────────────────┬────────────────────┘
          │                                   │
          ▼                                   ▼
 ┌─────────────────────┐           ┌─────────────────────┐
@@ -17,13 +17,13 @@ A proof of concept demonstrating OpenTelemetry integration with OpenSearch 3 usi
 │  - EF Core          │           │  - StackExchange    │
 │  - PostgreSQL DB    │           │  - Valkey (Redis)   │
 └──────────┬──────────┘           └──────────┬──────────┘
-           │                                  │
-           ▼                                  ▼
+           │                                 │
+           ▼                                 ▼
     ┌──────────┐                      ┌──────────┐
     │PostgreSQL│                      │  Valkey  │
     └──────────┘                      └──────────┘
-
-                        ↓ All Services Send Telemetry ↓
+            │                             │   
+            ▼ All Services Send Telemetry ▼
 
 ┌─────────────────────────────────────────────────────────────────┐
 │           OpenTelemetry Collector (4317, 4318)                  │
