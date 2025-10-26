@@ -1,17 +1,19 @@
 FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
-WORKDIR /src/api
+WORKDIR /src
 
-COPY src/api/api.csproj .
+# Copy project file
+COPY analytics-api.csproj .
 RUN dotnet restore
 
-COPY src/api/. .
+# Copy source files
+COPY . .
 RUN dotnet publish -c Release -o /app/publish
 
 FROM mcr.microsoft.com/dotnet/aspnet:9.0
 WORKDIR /app
 COPY --from=build /app/publish .
 
-EXPOSE 5233
-ENV ASPNETCORE_URLS=http://+:5233
+EXPOSE 5235
+ENV ASPNETCORE_URLS=http://+:5235
 
-ENTRYPOINT ["dotnet", "api.dll"]
+ENTRYPOINT ["dotnet", "analytics-api.dll"]
